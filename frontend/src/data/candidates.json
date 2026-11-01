@@ -1,0 +1,1020 @@
+[
+  {
+    "id": "C-012",
+    "blobId": 12,
+    "title": "Industrial block cleared",
+    "category": "demolition_clearing",
+    "confidence": 0.95,
+    "hasChange": true,
+    "changeYear": 2023,
+    "rationale": "The industrial buildings and parking in the center of the 2017 image have been demolished and cleared to bare ground by 2024.",
+    "description": "confirmed change (~2023), category 'demolition_clearing', VLM confidence 0.95. The industrial buildings and parking in the center of the 2017 image have been demolished and cleared to bare ground by 2024.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.419392904863437,
+            48.94309419910242
+          ],
+          [
+            2.41939782965813,
+            48.94265301292102
+          ],
+          [
+            2.418728240045877,
+            48.94264976782035
+          ],
+          [
+            2.4187331704361257,
+            48.94220858148434
+          ],
+          [
+            2.418063586586567,
+            48.94220533266963
+          ],
+          [
+            2.418073458474059,
+            48.941322959507666
+          ],
+          [
+            2.4194126035409567,
+            48.941329453291985
+          ],
+          [
+            2.4194076789968877,
+            48.94177064001577
+          ],
+          [
+            2.4200772573345355,
+            48.94177388132384
+          ],
+          [
+            2.4200723383859324,
+            48.94221506789304
+          ],
+          [
+            2.42074192248599,
+            48.94221830548705
+          ],
+          [
+            2.4207370091330453,
+            48.94265949190158
+          ],
+          [
+            2.4200674193538845,
+            48.94265625428142
+          ],
+          [
+            2.420062500238389,
+            48.94309744048901
+          ],
+          [
+            2.419392904863437,
+            48.94309419910242
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.4192919779761035,
+      48.94213775489558
+    ],
+    "areaHa": 2.2,
+    "score": 0.81,
+    "status": "change",
+    "rank": 1
+  },
+  {
+    "id": "C-031",
+    "blobId": 31,
+    "title": "Sports complex rebuilt",
+    "category": "new_construction",
+    "confidence": 0.95,
+    "hasChange": true,
+    "changeYear": 2022,
+    "rationale": "The sports complex was reorganized: the old pitches and tennis courts are gone, replaced by a new stadium with a track, a new pitch, new large buildings, and a construction site, with new paths cutting through.",
+    "description": "confirmed change (~2022), category 'new_construction', VLM confidence 0.95. The sports complex was reorganized: the old pitches and tennis courts are gone, replaced by a new stadium with a track, a new pitch, new large buildings, and a construction site, with new paths cutting through.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.417433533790513,
+            48.938672583340086
+          ],
+          [
+            2.4174434156947915,
+            48.93779020734013
+          ],
+          [
+            2.4167738887983425,
+            48.93778695130784
+          ],
+          [
+            2.4167936743127636,
+            48.93602219724703
+          ],
+          [
+            2.417463178497657,
+            48.93602545317419
+          ],
+          [
+            2.417458237922647,
+            48.93646664198636
+          ],
+          [
+            2.4181277478690446,
+            48.93646989419995
+          ],
+          [
+            2.4181228128880745,
+            48.93691108285793
+          ],
+          [
+            2.418792328595981,
+            48.93691433135793
+          ],
+          [
+            2.418797257899106,
+            48.93647314267373
+          ],
+          [
+            2.4214752988540695,
+            48.93648609917048
+          ],
+          [
+            2.421460578829215,
+            48.93780966499545
+          ],
+          [
+            2.4207910514316104,
+            48.9378064314027
+          ],
+          [
+            2.420786138912057,
+            48.93824761962394
+          ],
+          [
+            2.4201166059195955,
+            48.938244382265125
+          ],
+          [
+            2.4201116876384763,
+            48.93868557027967
+          ],
+          [
+            2.417433533790513,
+            48.938672583340086
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.4190319049340046,
+      48.93744494773188
+    ],
+    "areaHa": 7.2,
+    "score": 0.78,
+    "status": "change",
+    "rank": 2
+  },
+  {
+    "id": "C-018",
+    "blobId": 18,
+    "title": "Terminal yard reconfigured",
+    "category": "new_construction",
+    "confidence": 0.9,
+    "hasChange": true,
+    "changeYear": 2024,
+    "rationale": "The large white warehouse/tent structure and smaller buildings in 2017 are gone, replaced in 2024 by gantry/terminal structures at the top, stacked container storage, and new small buildings on the same yard.",
+    "description": "confirmed change (~2024), category 'new_construction', VLM confidence 0.90. The large white warehouse/tent structure and smaller buildings in 2017 are gone, replaced in 2024 by gantry/terminal structures at the top, stacked container storage, and new small buildings on the same yard.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.42475942883239,
+            48.94223765250639
+          ],
+          [
+            2.4247643080278984,
+            48.94179646575488
+          ],
+          [
+            2.4240947291084685,
+            48.941793250628194
+          ],
+          [
+            2.424099613900132,
+            48.94135206372188
+          ],
+          [
+            2.4261083338697307,
+            48.941361697803586
+          ],
+          [
+            2.4261034661148435,
+            48.94180288478767
+          ],
+          [
+            2.4267730452821654,
+            48.941806088693774
+          ],
+          [
+            2.4267681831237287,
+            48.94224727552295
+          ],
+          [
+            2.42475942883239,
+            48.94223765250639
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.425433887030056,
+      48.94179967714139
+    ],
+    "areaHa": 1.4,
+    "score": 0.76,
+    "status": "change",
+    "rank": 3
+  },
+  {
+    "id": "C-009",
+    "blobId": 9,
+    "title": "New building on former fields",
+    "category": "new_construction",
+    "confidence": 0.9,
+    "hasChange": true,
+    "changeYear": 2021,
+    "rationale": "The grassy field at top center in 2017 now holds a large white-roofed building with cleared ground, and the left field has been converted to a paved or gravel area with small structures.",
+    "description": "confirmed change (~2021), category 'new_construction', VLM confidence 0.90. The grassy field at top center in 2017 now holds a large white-roofed building with cleared ground, and the left field has been converted to a paved or gravel area with small structures.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.4187134483732837,
+            48.94397332574342
+          ],
+          [
+            2.418718379014458,
+            48.94353213994993
+          ],
+          [
+            2.4207271821771013,
+            48.94354186418816
+          ],
+          [
+            2.4207222685740977,
+            48.943983050060154
+          ],
+          [
+            2.4187134483732837,
+            48.94397332574342
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.4197203194512804,
+      48.9437575992159
+    ],
+    "areaHa": 0.7,
+    "score": 0.72,
+    "status": "change",
+    "rank": 4
+  },
+  {
+    "id": "C-008",
+    "blobId": 8,
+    "title": "Construction roads and laydown",
+    "category": "new_construction",
+    "confidence": 0.92,
+    "hasChange": true,
+    "changeYear": 2024,
+    "rationale": "The cleared industrial/dirt area with ponds in 2017 now has a network of new paved tracks and loops, and the reddish field has become a paved lot with many containers or buildings.",
+    "description": "confirmed change (~2024), category 'new_construction', VLM confidence 0.92. The cleared industrial/dirt area with ponds in 2017 now has a network of new paved tracks and loops, and the reddish field has become a paved lot with many containers or buildings.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.406660543060527,
+            48.94391427291854
+          ],
+          [
+            2.406665575930322,
+            48.94347308760175
+          ],
+          [
+            2.4080047749179165,
+            48.943479708818685
+          ],
+          [
+            2.408009796343826,
+            48.94303852326757
+          ],
+          [
+            2.4086793902861268,
+            48.943041828238904
+          ],
+          [
+            2.4086844059476915,
+            48.94260064248026
+          ],
+          [
+            2.409353994295873,
+            48.94260394368467
+          ],
+          [
+            2.409359004193286,
+            48.942162757718556
+          ],
+          [
+            2.4100285869473455,
+            48.9421660551561
+          ],
+          [
+            2.4100235827290017,
+            48.94260724114883
+          ],
+          [
+            2.411362759849707,
+            48.942613824856416
+          ],
+          [
+            2.411352773875209,
+            48.94349619640569
+          ],
+          [
+            2.410683173914044,
+            48.9434929063689
+          ],
+          [
+            2.4106781751203785,
+            48.94393409184568
+          ],
+          [
+            2.406660543060527,
+            48.94391427291854
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.4093883290974096,
+      48.94326592849836
+    ],
+    "areaHa": 3.9,
+    "score": 0.69,
+    "status": "change",
+    "rank": 5
+  },
+  {
+    "id": "C-023",
+    "blobId": 23,
+    "title": "Aquatic centre added",
+    "category": "new_construction",
+    "confidence": 0.9,
+    "hasChange": true,
+    "changeYear": 2022,
+    "rationale": "A new building with a swimming pool and a new structure with blue-roofed areas appear in the sports complex, and the former red clay courts were converted into green turf fields, indicating new construction and surface change.",
+    "description": "confirmed change (~2022), category 'new_construction', VLM confidence 0.90. A new building with a swimming pool and a new structure with blue-roofed areas appear in the sports complex, and the former red clay courts were converted into green turf fields, indicating new construction and surface change.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.3886123530578924,
+            48.94117631121731
+          ],
+          [
+            2.388617538741455,
+            48.94073512554904
+          ],
+          [
+            2.389287101781079,
+            48.94073853885025
+          ],
+          [
+            2.3892819217762287,
+            48.941179724546096
+          ],
+          [
+            2.3886123530578924,
+            48.94117631121731
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.388949728839172,
+      48.94095742553079
+    ],
+    "areaHa": 0.2,
+    "score": 0.66,
+    "status": "change",
+    "rank": 6
+  },
+  {
+    "id": "C-037",
+    "blobId": 37,
+    "title": "Warehouse expanded",
+    "category": "new_construction",
+    "confidence": 0.8,
+    "hasChange": true,
+    "changeYear": 2018,
+    "rationale": "The 2017 image shows a partly completed warehouse with bare sand around it and a vegetated area. By 2024 the building is larger, a new industrial building has been added in the middle-right, and the surrounding ground has been cleared to bare surface.",
+    "description": "confirmed change (~2018), category 'new_construction', VLM confidence 0.80. The 2017 image shows a partly completed warehouse with bare sand around it and a vegetated area. By 2024 the building is larger, a new industrial building has been added in the middle-right, and the surrounding ground has been cleared to bare surface.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.407415598831795,
+            48.93641741000309
+          ],
+          [
+            2.4074206245727465,
+            48.93597622158834
+          ],
+          [
+            2.4067511216557733,
+            48.93597290956427
+          ],
+          [
+            2.4067561529890957,
+            48.93553172099584
+          ],
+          [
+            2.406086655835034,
+            48.93552840525875
+          ],
+          [
+            2.406091692760535,
+            48.935087216536694
+          ],
+          [
+            2.4067611842370793,
+            48.93509053224702
+          ],
+          [
+            2.4067662153997262,
+            48.934649343317844
+          ],
+          [
+            2.407435701284141,
+            48.934652655261694
+          ],
+          [
+            2.4074306757989175,
+            48.93509384421761
+          ],
+          [
+            2.408100167445953,
+            48.935097152448485
+          ],
+          [
+            2.40809514755301,
+            48.93553834125075
+          ],
+          [
+            2.408764644962671,
+            48.93554164576855
+          ],
+          [
+            2.4087696591780894,
+            48.93510045693962
+          ],
+          [
+            2.410108642897282,
+            48.93510705470269
+          ],
+          [
+            2.410103640036918,
+            48.93554824358489
+          ],
+          [
+            2.410773137701311,
+            48.93555153688343
+          ],
+          [
+            2.4107681404337162,
+            48.93599272561182
+          ],
+          [
+            2.410098637091697,
+            48.9359894322867
+          ],
+          [
+            2.4100936340616155,
+            48.936430620808096
+          ],
+          [
+            2.407415598831795,
+            48.93641741000309
+          ]
+        ],
+        [
+          [
+            2.4087596306622023,
+            48.93598283441711
+          ],
+          [
+            2.409429133834492,
+            48.9359861352218
+          ],
+          [
+            2.4094341424573384,
+            48.935544946546614
+          ],
+          [
+            2.408764644962671,
+            48.93554164576855
+          ],
+          [
+            2.4087596306622023,
+            48.93598283441711
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.408383757840361,
+      48.935672130276615
+    ],
+    "areaHa": 3.6,
+    "score": 0.64,
+    "status": "change",
+    "rank": 7
+  },
+  {
+    "id": "C-007",
+    "blobId": 7,
+    "title": "Works compound in the clearing",
+    "category": "new_construction",
+    "confidence": 0.8,
+    "hasChange": true,
+    "changeYear": 2021,
+    "rationale": "The northern part of the circular clearing, previously grass, now has structures, a red-roofed building, fenced areas and tents, and the eastern corner has a new parking or building complex, while the lower-left amphitheater area looks altered.",
+    "description": "confirmed change (~2021), category 'new_construction', VLM confidence 0.80. The northern part of the circular clearing, previously grass, now has structures, a red-roofed building, fenced areas and tents, and the eastern corner has a new parking or building complex, while the lower-left amphitheater area looks altered.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.3999644964646754,
+            48.943880942146755
+          ],
+          [
+            2.3999797651951655,
+            48.94255738646098
+          ],
+          [
+            2.4006493524302956,
+            48.942560736288506
+          ],
+          [
+            2.4006544361554103,
+            48.94211955067121
+          ],
+          [
+            2.4013240177976964,
+            48.94212289673148
+          ],
+          [
+            2.4013341736314193,
+            48.94124052490045
+          ],
+          [
+            2.4020037440020072,
+            48.94124386716657
+          ],
+          [
+            2.4019986718070663,
+            48.941685053199436
+          ],
+          [
+            2.4040074004709964,
+            48.94169505763766
+          ],
+          [
+            2.404002345226865,
+            48.94213624357054
+          ],
+          [
+            2.4046719272986814,
+            48.94213957092978
+          ],
+          [
+            2.4046567780891825,
+            48.94346312772409
+          ],
+          [
+            2.403987178979922,
+            48.94345980028426
+          ],
+          [
+            2.40399223448133,
+            48.94301861489386
+          ],
+          [
+            2.403322641137031,
+            48.943015283740635
+          ],
+          [
+            2.4033175799563806,
+            48.94345646910413
+          ],
+          [
+            2.402647981018656,
+            48.94345313418371
+          ],
+          [
+            2.402642914072809,
+            48.94389431933942
+          ],
+          [
+            2.3999644964646754,
+            48.943880942146755
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.402225673597341,
+      48.94274194040841
+    ],
+    "areaHa": 6.7,
+    "score": 0.63,
+    "status": "reviewing",
+    "rank": 8
+  },
+  {
+    "id": "C-029",
+    "blobId": 29,
+    "title": "Pitch and courts rebuilt",
+    "category": "surface_change",
+    "confidence": 0.8,
+    "hasChange": true,
+    "changeYear": 2021,
+    "rationale": "The central grass field changed from a dark, worn state to a well-maintained striped pitch, the tennis courts on the right were cleared or replaced by bare ground, and colorful new sports surfaces appeared on the right side.",
+    "description": "confirmed change (~2021), category 'surface_change', VLM confidence 0.80. The central grass field changed from a dark, worn state to a well-maintained striped pitch, the tennis courts on the right were cleared or replaced by bare ground, and colorful new sports surfaces appeared on the right side.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.3812733428363217,
+            48.93893258912929
+          ],
+          [
+            2.3812838381555967,
+            48.93805021641561
+          ],
+          [
+            2.3839619506768157,
+            48.9380640110761
+          ],
+          [
+            2.3839567257741368,
+            48.938505197634605
+          ],
+          [
+            2.383287191832603,
+            48.93850175455156
+          ],
+          [
+            2.3832819611630827,
+            48.93894294090166
+          ],
+          [
+            2.3812733428363217,
+            48.93893258912929
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.382474560559757,
+      48.938466055321854
+    ],
+    "areaHa": 1.7,
+    "score": 0.59,
+    "status": "change",
+    "rank": 9
+  },
+  {
+    "id": "C-006",
+    "blobId": 6,
+    "title": "No persistent change",
+    "category": "no_visible_change",
+    "confidence": 0.7,
+    "hasChange": false,
+    "changeYear": 2021,
+    "rationale": "The park's tree stands and central meadow look the same in both years; the meadow just appears drier and paler in 2024, which points to seasonal or imagery differences rather than a land-cover change.",
+    "description": "not confirmed change (~2021), category 'no_visible_change', VLM confidence 0.70. The park's tree stands and central meadow look the same in both years; the meadow just appears drier and paler in 2024, which points to seasonal or imagery differences rather than a land-cover change.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.396616476396976,
+            48.943864136498604
+          ],
+          [
+            2.3966267124297054,
+            48.94298176649362
+          ],
+          [
+            2.39729630491153,
+            48.94298513504951
+          ],
+          [
+            2.3973065292388243,
+            48.94210276426672
+          ],
+          [
+            2.398645691746105,
+            48.94210949004913
+          ],
+          [
+            2.398630389199842,
+            48.94343304611492
+          ],
+          [
+            2.3972911926177978,
+            48.94342632016964
+          ],
+          [
+            2.397286080237338,
+            48.94386750510888
+          ],
+          [
+            2.396616476396976,
+            48.943864136498604
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.397715438843625,
+      48.94293209034271
+    ],
+    "areaHa": 1.9,
+    "score": 0.58,
+    "status": "no_change",
+    "rank": 10
+  },
+  {
+    "id": "C-010",
+    "blobId": 10,
+    "title": "Warehouse roof resurfaced",
+    "category": "surface_change",
+    "confidence": 0.6,
+    "hasChange": true,
+    "changeYear": 2022,
+    "rationale": "The large building roof has been resurfaced from a dark tone to a lighter gray, and the left parking area now shows parked cars with new markings, while the building footprint stays the same.",
+    "description": "confirmed change (~2022), category 'surface_change', VLM confidence 0.60. The large building roof has been resurfaced from a dark tone to a lighter gray, and the left parking area now shows parked cars with new markings, while the building footprint stays the same.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.4234006966744737,
+            48.943995963450924
+          ],
+          [
+            2.4234055875598863,
+            48.94355477747468
+          ],
+          [
+            2.4267535961535183,
+            48.943570834925666
+          ],
+          [
+            2.4267487336651423,
+            48.94401202103152
+          ],
+          [
+            2.4234006966744737,
+            48.943995963450924
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.4250771532651925,
+      48.94378341093185
+    ],
+    "areaHa": 1.2,
+    "score": 0.55,
+    "status": "pending",
+    "rank": 11
+  },
+  {
+    "id": "C-027",
+    "blobId": 27,
+    "title": "Temporary structure erected",
+    "category": "new_construction",
+    "confidence": 0.7,
+    "hasChange": true,
+    "changeYear": 2021,
+    "rationale": "At the bottom, a large white rectangular structure (likely a covered or temporary building) now stands where there was bare or sandy ground, and a lower-right area changed to a white surface, while some trees were cleared along the mid-field edges.",
+    "description": "confirmed change (~2021), category 'new_construction', VLM confidence 0.70. At the bottom, a large white rectangular structure (likely a covered or temporary building) now stands where there was bare or sandy ground, and a lower-right area changed to a white surface, while some trees were cleared along the mid-field edges.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.3939791856787593,
+            48.94032114116725
+          ],
+          [
+            2.3939946056554366,
+            48.938997581877445
+          ],
+          [
+            2.3946641466810075,
+            48.93900096514857
+          ],
+          [
+            2.394648743739653,
+            48.940324524520314
+          ],
+          [
+            2.3939791856787593,
+            48.94032114116725
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.394321670525862,
+      48.939661053849136
+    ],
+    "areaHa": 0.7,
+    "score": 0.53,
+    "status": "pending",
+    "rank": 12
+  },
+  {
+    "id": "C-025",
+    "blobId": 25,
+    "title": "Pond and scrub overgrow",
+    "category": "vegetation_gain",
+    "confidence": 0.6,
+    "hasChange": true,
+    "changeYear": 2018,
+    "rationale": "The central grassy/shrub area has become denser and more uniformly vegetated, and the dark pond has been overgrown, while the gravel platform stays largely the same, apart from a new linear feature across it and trees along the roadside that have grown larger.",
+    "description": "confirmed change (~2018), category 'vegetation_gain', VLM confidence 0.60. The central grassy/shrub area has become denser and more uniformly vegetated, and the dark pond has been overgrown, while the gravel platform stays largely the same, apart from a new linear feature across it and trees along the roadside that have grown larger.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.4160696943561693,
+            48.940872004006735
+          ],
+          [
+            2.4160845524157635,
+            48.93954844260285
+          ],
+          [
+            2.415415002974057,
+            48.93954517898534
+          ],
+          [
+            2.4154199611709797,
+            48.93910399151576
+          ],
+          [
+            2.416759048781529,
+            48.93911051495806
+          ],
+          [
+            2.416754101941437,
+            48.93955170248031
+          ],
+          [
+            2.4174236515509824,
+            48.939554958617734
+          ],
+          [
+            2.4174088275630488,
+            48.94087852017942
+          ],
+          [
+            2.4160696943561693,
+            48.940872004006735
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.416581766208516,
+      48.93999207519661
+    ],
+    "areaHa": 1.9,
+    "score": 0.52,
+    "status": "pending",
+    "rank": 13
+  },
+  {
+    "id": "C-005",
+    "blobId": 5,
+    "title": "Paths widened in the park",
+    "category": "surface_change",
+    "confidence": 0.55,
+    "hasChange": true,
+    "changeYear": 2021,
+    "rationale": "The central meadow looks drier and browner in 2024, and the paths appear wider and more defined, with a modified circular area at left; this could be seasonal or drought-related, but the path and surface changes look real.",
+    "description": "confirmed change (~2021), category 'surface_change', VLM confidence 0.55. The central meadow looks drier and browner in 2024, and the paths appear wider and more defined, with a modified circular area at left; this could be seasonal or drought-related, but the path and surface changes look real.",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            2.3892508399017442,
+            48.943826834924415
+          ],
+          [
+            2.3892560204338578,
+            48.94338565031348
+          ],
+          [
+            2.3885864233205165,
+            48.94338223684694
+          ],
+          [
+            2.388591609443941,
+            48.942941052082666
+          ],
+          [
+            2.3892612008780882,
+            48.94294446552167
+          ],
+          [
+            2.3892663812344384,
+            48.94250328054898
+          ],
+          [
+            2.3912751390262064,
+            48.94251349834194
+          ],
+          [
+            2.3912699757071616,
+            48.9429546833971
+          ],
+          [
+            2.391939567492076,
+            48.94295808187508
+          ],
+          [
+            2.3919344097646418,
+            48.943399266776815
+          ],
+          [
+            2.3939432026813248,
+            48.943409439851294
+          ],
+          [
+            2.3939380619043042,
+            48.943850624654274
+          ],
+          [
+            2.390590045750432,
+            48.94383365069167
+          ],
+          [
+            2.3905952149239584,
+            48.94339246602573
+          ],
+          [
+            2.3899256176350367,
+            48.94338906003974
+          ],
+          [
+            2.3899204427822163,
+            48.9438302446782
+          ],
+          [
+            2.3892508399017442,
+            48.943826834924415
+          ]
+        ]
+      ]
+    },
+    "centroid": [
+      2.390931489680583,
+      48.943268114817236
+    ],
+    "areaHa": 3.4,
+    "score": 0.49,
+    "status": "pending",
+    "rank": 14
+  }
+]
