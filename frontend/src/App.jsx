@@ -55,16 +55,55 @@ const DRAW_BOUNDS = [
 ]
 const ZONE_CENTER = [(ZONE_WEST + ZONE_EAST) / 2, (ZONE_SOUTH + ZONE_NORTH) / 2]
 const TRANSPARENT_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg=='
-const DEFAULT_THRESHOLD = 0.65
+const DEFAULT_THRESHOLD = 0.45
 const MIN_THRESHOLD = 0.1
 const MAX_THRESHOLD = 1.2
 const THRESHOLD_STEP = 0.05
+const ALPHAEARTH_CHUNK_KM = 5
+const MAX_CONCURRENT_CHUNK_DOWNLOADS = 5
+
+function splitIntoChunks(bounds) {
+  const [[west, south], [east, north]] = bounds
+  const latitudeStep = ALPHAEARTH_CHUNK_KM / 111.32
+  const longitudeStep = ALPHAEARTH_CHUNK_KM / (111.32 * Math.cos(((south + north) / 2) * Math.PI / 180))
+  const chunks = []
+  for (let bottom = south; bottom < north - 1e-10; bottom += latitudeStep) {
+    for (let left = west; left < east - 1e-10; left += longitudeStep) {
+      chunks.push([[left, bottom], [Math.min(east, left + longitudeStep), Math.min(north, bottom + latitudeStep)]])
+    }
+  }
+  return chunks
+}
+
+async function stitchChunkImages(chunks, bounds, field) {
+  const [[west, south], [east, north]] = bounds
+  const canvas = document.createElement('canvas')
+  canvas.width = 1200
+  canvas.height = 800
+  const context = canvas.getContext('2d')
+  for (const chunk of chunks) {
+    if (!chunk[field]) continue
+    const image = await new Promise((resolve, reject) => {
+      const item = new Image()
+      item.onload = () => resolve(item)
+      item.onerror = reject
+      item.src = `data:image/png;base64,${chunk[field]}`
+    })
+    const [[chunkWest, chunkSouth], [chunkEast, chunkNorth]] = chunk.bounds
+    const x = (chunkWest - west) / (east - west) * canvas.width
+    const y = (north - chunkNorth) / (north - south) * canvas.height
+    const width = (chunkEast - chunkWest) / (east - west) * canvas.width
+    const height = (chunkNorth - chunkSouth) / (north - south) * canvas.height
+    context.drawImage(image, x, y, width, height)
+  }
+  return canvas.toDataURL('image/png').split(',')[1]
+}
 
 const MAP_LAYERS = [
   { id: 'satellite', label: 'Satellite view', detail: 'Sentinel-2 imagery', icon: Satellite, needsData: false },
   { id: 'alphaearth', label: 'AlphaEarth', detail: '2017 ↔ 2024 embedding PCA', icon: Layers, needsData: true },
   { id: 'velocity', label: 'Velocity', detail: 'Embedding displacement per year', icon: Activity, needsData: true },
-  { id: 'detections', label: 'Detected changes', detail: 'Thresholded at D ≥ 0.65', icon: ScanSearch, needsData: true },
+  { id: 'detections', label: 'Detected changes', detail: 'Thresholded at D ≥ 0.45', icon: ScanSearch, needsData: true },
 ]
 
 const STAGE_DURATION = { classifying: 2800 }
@@ -93,6 +132,8 @@ function candidateForUi(candidate) {
     areaHa: candidate.area_ha || 0,
     before: candidate.before_url,
     after: candidate.after_url,
+    beforeYear: candidate.before_year || 2017,
+    afterYear: candidate.after_year || 2024,
     mapStatus: candidate.status === 'done' ? 'done' : candidate.status === 'error' ? 'error' : ['downloading', 'analyzing'].includes(candidate.status) ? 'reading' : 'queued',
   }
 }
@@ -799,7 +840,7 @@ function MapStage({ stage, candidates, selectedId, onSelect, onDrawComplete, sca
     })
   }
 
-  const zoneVisible = zoneRect && ['loading', 'classifying', 'detected'].includes(stage)
+  const zoneVisible = zoneRect && (['loading', 'classifying', 'detected'].includes(stage) || thresholdUpdating)
 
   return (
     <div className="map-stage" data-stage={stage} data-ready={mapReady ? 'true' : 'false'}>
@@ -841,20 +882,26 @@ function MapStage({ stage, candidates, selectedId, onSelect, onDrawComplete, sca
 
       {zoneVisible && (
         <div
-          className={`zone-frame is-${stage}`}
+          className={`zone-frame is-${stage}${thresholdUpdating ? ' is-threshold-updating' : ''}`}
           style={{
             left: `${zoneRect.left}px`,
             top: `${zoneRect.top}px`,
             width: `${zoneRect.width}px`,
             height: `${zoneRect.height}px`,
           }}
-          aria-hidden="true"
+          aria-hidden={thresholdUpdating ? undefined : true}
         >
           <span className="zone-corner zone-corner--tl" />
           <span className="zone-corner zone-corner--tr" />
           <span className="zone-corner zone-corner--bl" />
           <span className="zone-corner zone-corner--br" />
           <span className="zone-scan"><span /></span>
+          {thresholdUpdating && (
+            <span className="zone-refresh" role="status" aria-live="polite">
+              <span className="zone-refresh-spinner" />
+              <span>Updating detected changes</span>
+            </span>
+          )}
         </div>
       )}
 
@@ -938,8 +985,8 @@ function CompareViewer({ candidate }) {
           style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
           onError={() => setImageError(true)}
         />}
-        <span className="compare-label compare-label--before">2017 <b>before</b></span>
-        <span className="compare-label compare-label--after">2024 <b>after</b></span>
+        <span className="compare-label compare-label--before">{candidate.beforeYear || 2017} <b>before</b></span>
+        <span className="compare-label compare-label--after">{candidate.afterYear || 2024} <b>after</b></span>
         <div className="compare-divider" aria-hidden="true">
           <span className="compare-handle">
             <ChevronLeft size={13} strokeWidth={2} />
@@ -1022,7 +1069,7 @@ function MethodPanel({ onClose }) {
         <li>
           <div>
             <h3>Detect candidates</h3>
-            <p>Pixels with total displacement D&nbsp;≥&nbsp;0.65 are highlighted as detected change. D is a screening signal, not a probability.</p>
+            <p>Pixels with total displacement D&nbsp;≥&nbsp;0.45 are highlighted as detected change. D is a screening signal, not a probability.</p>
           </div>
         </li>
         <li>
@@ -1099,7 +1146,7 @@ const PROCESS_COPY = {
   loading: {
     eyebrow: 'AlphaEarth · 2017 → 2024',
     title: 'Loading embeddings',
-    body: 'Downloading real 2017 and 2024 embeddings for the 4.98\u00a0km² zone.',
+    body: 'Downloading real 2017 and 2024 embeddings in 5 × 5 km chunks.',
   },
   classifying: {
     eyebrow: '3-component PCA · AlphaEarth',
@@ -1107,7 +1154,7 @@ const PROCESS_COPY = {
     body: 'The paired 64-band embeddings are projected into three principal components.',
   },
   detected: {
-    eyebrow: 'Detector · D ≥ 0.65',
+    eyebrow: 'Detector · D ≥ 0.45',
     title: 'Change regions are ready',
     body: 'Review the thresholded regions, then send them to the hosted vision model.',
   },
@@ -1119,11 +1166,14 @@ const PROCESS_COPY = {
 }
 
 function ProcessDock({ stage, completed, total, readingIds, candidates, onCompute, busy, analysis, reviewJob }) {
-  const copy = stage === 'detected' && analysis
+  const copy = stage === 'loading' && analysis?.chunk_count
+    ? { ...PROCESS_COPY.loading, body: `Loaded ${analysis.loaded_chunks} of ${analysis.chunk_count} chunks. Loaded areas are appearing on the map.` }
+    : stage === 'detected' && analysis
     ? { ...PROCESS_COPY.detected, title: `${analysis.detected_pixels.toLocaleString()} pixels in ${analysis.detected_components.toLocaleString()} areas`, body: `About ${analysis.detected_area_ha.toFixed(1)} ha remain at D ≥ ${analysis.threshold.toFixed(2)} after the >50 px area filter.` }
     : PROCESS_COPY[stage]
   const interpreting = stage === 'interpreting'
-  const progress = interpreting ? (total ? Math.round((completed / total) * 100) : 100) : stage === 'detected' ? 100 : 0
+  const chunkProgress = analysis?.chunk_count ? Math.round((analysis.loaded_chunks / analysis.chunk_count) * 100) : 0
+  const progress = interpreting ? (total ? Math.round((completed / total) * 100) : 100) : stage === 'detected' ? 100 : chunkProgress
 
   return (
     <section className={`process-dock stage-${stage}`} data-stage={stage} aria-label={copy.title}>
@@ -1139,6 +1189,9 @@ function ProcessDock({ stage, completed, total, readingIds, candidates, onComput
               <span className="pca-swatch" style={{ background: '#e87452' }} />
               3-component PCA field
             </p>
+          )}
+          {stage === 'loading' && analysis?.chunk_count > 0 && (
+            <p className="process-count" aria-live="polite">{analysis.loaded_chunks} of {analysis.chunk_count} chunks loaded</p>
           )}
           {stage === 'detected' && (
             <p className="process-footnote">AI-assisted analysis is limited to 15 changes per selected zone in this prototype. Other detected zones remain visible on the map.</p>
@@ -1174,14 +1227,14 @@ function ProcessDock({ stage, completed, total, readingIds, candidates, onComput
       <div
         className="process-progress"
         role="progressbar"
-        aria-label={interpreting ? 'Candidates read' : copy.title}
+        aria-label={interpreting ? 'Candidates read' : stage === 'loading' ? 'AlphaEarth chunks loaded' : copy.title}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={interpreting || stage === 'detected' ? progress : undefined}
+        aria-valuenow={interpreting || stage === 'detected' || (stage === 'loading' && analysis?.chunk_count) ? progress : undefined}
       >
         <span
-          className={interpreting ? 'is-live' : ''}
-          style={interpreting || stage === 'detected'
+          className={interpreting || (stage === 'loading' && analysis?.chunk_count) ? 'is-live' : ''}
+          style={interpreting || stage === 'detected' || (stage === 'loading' && analysis?.chunk_count)
             ? { transform: `scaleX(${progress / 100})` }
           : { '--duration': `${STAGE_DURATION[stage] || 0}ms` }}
         />
@@ -1272,29 +1325,38 @@ function EvidenceSheet({
   onDecide,
   onShowAll,
   sheetScrollRef,
+  candidates = [],
+  activeTab = 'details',
+  onTabChange,
+  showTabs = false,
 }) {
   if (!candidate) {
     return (
-      <aside className="evidence-sheet is-empty" aria-label="No candidates in view">
-        <div className="sheet-scroll">
-          <span className="sheet-grip" aria-hidden="true" />
-          <div className="sheet-empty">
-            <h2>No candidates in this filter</h2>
-            <p>Nothing in this filter matches the current results. Show all candidates to keep reviewing.</p>
-            <button type="button" className="primary-action" onClick={onShowAll}>Show all results</button>
+      <aside className={`evidence-sheet ${showTabs ? 'results-sheet' : 'is-empty'}`} aria-label={showTabs ? 'Review results' : 'No candidates in view'}>
+        {showTabs && <ResultsPanelTabs activeTab={activeTab} onChange={onTabChange} />}
+        {showTabs && activeTab === 'stats' ? <ChangeStatsPanel candidates={candidates} /> : (
+          <div className="sheet-scroll">
+            <span className="sheet-grip" aria-hidden="true" />
+            <div className="sheet-empty">
+              <h2>No candidates in this filter</h2>
+              <p>Nothing in this filter matches the current results. Show all candidates to keep reviewing.</p>
+              {(!showTabs || candidates.length > 0) && <button type="button" className="primary-action" onClick={onShowAll}>Show all results</button>}
+            </div>
           </div>
-        </div>
+        )}
       </aside>
     )
   }
 
   const meta = metaFor(candidate)
   return (
-    <aside className="evidence-sheet" aria-label={`Evidence for ${candidate.id}`}>
+    <aside className={`evidence-sheet ${showTabs ? 'results-sheet' : ''}`} aria-label={showTabs ? `Review results for ${candidate.id}` : `Evidence for ${candidate.id}`}>
+      {showTabs && <ResultsPanelTabs activeTab={activeTab} onChange={onTabChange} />}
+      {showTabs && activeTab === 'stats' ? <ChangeStatsPanel candidates={candidates} /> : <>
       <div className="sheet-scroll" ref={sheetScrollRef}>
         <span className="sheet-grip" aria-hidden="true" />
         <div className="sheet-head" key={`${candidate.id}-head`}>
-          <span className="sheet-id">Candidate {candidate.id.replace('C-', '')} · rank {pad2(candidate.rank)}</span>
+          {!showTabs && <span className="sheet-id">Candidate {candidate.id.replace('C-', '')} · rank {pad2(candidate.rank)}</span>}
           <h2>{candidate.title}</h2>
           <p className="sheet-status">
             {statusLine(candidate)}
@@ -1348,7 +1410,91 @@ function EvidenceSheet({
         <span>Imagery © IGN · Embeddings © Google DeepMind</span>
         <span>D is a screening signal; VLM confidence is self-reported.</span>
       </div>
+      </>}
     </aside>
+  )
+}
+
+function ResultsPanelTabs({ activeTab, onChange }) {
+  return (
+    <div className="results-panel-tabs" role="tablist" aria-label="Right panel">
+      {['details', 'stats'].map((tab) => (
+        <button
+          type="button"
+          role="tab"
+          key={tab}
+          tabIndex={activeTab === tab ? 0 : -1}
+          aria-selected={activeTab === tab}
+          className={activeTab === tab ? 'is-active' : ''}
+          onClick={() => onChange(tab)}
+          onKeyDown={(event) => {
+            if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+            event.preventDefault()
+            const nextTab = tab === 'details' ? 'stats' : 'details'
+            onChange(nextTab)
+            event.currentTarget.parentElement.querySelector(`[data-panel-tab="${nextTab}"]`)?.focus()
+          }}
+          data-panel-tab={tab}
+        >
+          {tab === 'details' ? 'Details' : 'Stats'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function formatAreaM2(value) {
+  return `${Math.round(value).toLocaleString()} m²`
+}
+
+function ChangeStatsPanel({ candidates }) {
+  const stats = Object.entries(CATEGORY_META).map(([id, meta]) => {
+    const items = candidates.filter((candidate) => candidate.category === id)
+    return {
+      id,
+      ...meta,
+      count: items.length,
+      area: items.reduce((sum, candidate) => sum + (Number(candidate.areaHa) || 0) * 10000, 0),
+    }
+  }).filter((item) => item.count > 0)
+  const totalArea = stats.reduce((sum, item) => sum + item.area, 0)
+  const totalCount = candidates.length
+
+  return (
+    <div className="sheet-scroll stats-scroll" role="tabpanel" tabIndex={0} aria-label="Change distribution statistics">
+        <span className="sheet-id">VLM review complete · {totalCount} {totalCount === 1 ? 'region' : 'regions'}</span>
+        <div className="stats-heading">
+          <h2>Area by type of change</h2>
+          <p>Reviewed areas grouped by the type of change Gemini identified.</p>
+        </div>
+
+        <div className="stats-total" aria-label={`Total reviewed area ${formatAreaM2(totalArea)}`}>
+          <span>Total reviewed area</span>
+          <strong>{formatAreaM2(totalArea)}</strong>
+        </div>
+
+        <div className="stats-chart" role="img" aria-label={`Area distribution across ${stats.length} change types`}>
+          <div className="stats-bars">
+            {stats.map((item, index) => (
+              <div className="stats-row" key={item.id} style={{ '--bar-color': item.color, '--bar-delay': `${index * 55}ms` }}>
+                <div className="stats-row-label">
+                  <span className="stats-dot" />
+                  <span>{item.label}</span>
+                  <small>{item.count}</small>
+                </div>
+                <div className="stats-track"><span style={{ width: `${totalArea ? Math.max(item.area / totalArea * 100, 1.5) : 0}%` }} /></div>
+                <div className="stats-row-value">
+                  <strong>{formatAreaM2(item.area)}</strong>
+                  <span>{totalArea ? `${Math.round(item.area / totalArea * 100)}%` : '0%'}</span>
+                </div>
+              </div>
+            ))}
+            {!stats.length && <p className="stats-empty">No reviewed regions to summarize yet.</p>}
+          </div>
+        </div>
+
+        <div className="stats-note">Area is summed from detected regions and shown in square meters.</div>
+    </div>
   )
 }
 
@@ -1371,13 +1517,15 @@ function App() {
   const [stage, setStage] = useState('draw')
   const [selectedBounds, setSelectedBounds] = useState(ZONE_BOUNDS)
   const [analysis, setAnalysis] = useState(null)
-  const [pcaYearsReady, setPcaYearsReady] = useState(false)
+  const [pcaYears, setPcaYears] = useState(null)
+  const pcaYearsReady = Boolean(pcaYears)
   const [comparisonImage, setComparisonImage] = useState(null)
   const [activeLayer, setActiveLayer] = useState('satellite')
   const [comparePosition, setComparePosition] = useState(50)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
   const [thresholdUpdating, setThresholdUpdating] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
+  const [rightPanelTab, setRightPanelTab] = useState('details')
   const [filter, setFilter] = useState('all')
   const [showMethod, setShowMethod] = useState(false)
   const [toast, setToast] = useState(null)
@@ -1391,12 +1539,9 @@ function App() {
   const sheetScrollRef = useRef(null)
   const toastTimeout = useRef(null)
   const shellRef = useRef(null)
-  const pcaYearsRef = useRef(null)
-
   useEffect(() => {
     if (!analysis?.alphaearth_2017 || !analysis?.alphaearth_2024) {
-      pcaYearsRef.current = null
-      setPcaYearsReady(false)
+      setPcaYears(null)
       setComparisonImage(null)
       return undefined
     }
@@ -1410,8 +1555,8 @@ function App() {
     Promise.all([loadImage(analysis.alphaearth_2017), loadImage(analysis.alphaearth_2024)])
       .then(([year2017, year2024]) => {
         if (cancelled) return
-        pcaYearsRef.current = [year2017, year2024]
-        setPcaYearsReady(true)
+        setPcaYears([year2017, year2024])
+        setActiveLayer('alphaearth')
       })
       .catch(() => {
         if (!cancelled) notify('Could not render AlphaEarth comparison', 'Retry the scan to rebuild the year layers.', 'flag')
@@ -1420,9 +1565,8 @@ function App() {
   }, [analysis?.alphaearth_2017, analysis?.alphaearth_2024])
 
   useEffect(() => {
-    const years = pcaYearsRef.current
-    if (!analysis || !pcaYearsReady || !years) return
-    const [year2017, year2024] = years
+    if (!pcaYears) return
+    const [year2017, year2024] = pcaYears
     const canvas = document.createElement('canvas')
     canvas.width = year2017.naturalWidth
     canvas.height = year2017.naturalHeight
@@ -1435,10 +1579,11 @@ function App() {
     context.drawImage(year2017, 0, 0)
     context.restore()
     setComparisonImage(canvas.toDataURL('image/png'))
-  }, [analysis?.alphaearth_2017, analysis?.alphaearth_2024, comparePosition, pcaYearsReady])
+  }, [pcaYears, comparePosition])
 
   useEffect(() => {
     if (!analysis || !pcaYearsReady) return undefined
+    if (analysis.chunk_count && analysis.loaded_chunks < analysis.chunk_count) return undefined
     setActiveLayer('alphaearth')
     const timers = []
     const velocityTimer = window.setTimeout(() => {
@@ -1448,7 +1593,7 @@ function App() {
     }, 1000)
     timers.push(velocityTimer)
     return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [analysis, pcaYearsReady])
+  }, [scanEpoch, analysis?.chunk_count, analysis?.loaded_chunks, pcaYearsReady])
 
   useLayoutEffect(() => {
     const shell = shellRef.current
@@ -1489,10 +1634,12 @@ function App() {
     no_change: candidates.filter((candidate) => candidate.hasChange === false).length,
   }
 
-  const selected = filtered.find((candidate) => candidate.id === selectedId) || filtered[0] || null
+  const selected = filtered.find((candidate) => candidate.id === selectedId) || null
   const selectedDecision = selected ? decisions[selected.id] : null
   const completedCount = reviewJob?.completed || 0
-  const readingIds = reviewJob?.active_id ? [reviewJob.active_id] : []
+  const readingIds = reviewJob?.active_ids?.length
+    ? reviewJob.active_ids
+    : reviewJob?.active_id ? [reviewJob.active_id] : []
 
   useEffect(() => {
     if (!reviewJob?.id || !['queued', 'running'].includes(reviewJob.status)) return undefined
@@ -1508,6 +1655,7 @@ function App() {
         setCandidates(result.candidates.map(candidateForUi))
         if (result.status === 'complete' || result.status === 'cancelled') {
           setStage('results')
+          setRightPanelTab('stats')
           setActiveLayer('satellite')
         } else {
           timer = window.setTimeout(refresh, 900)
@@ -1569,13 +1717,26 @@ function App() {
     const timer = window.setTimeout(async () => {
       setThresholdUpdating(true)
       try {
-        const response = await fetch('/api/detection-threshold', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ threshold, bounds: selectedBounds }),
-        })
-        const result = await response.json()
-        if (!response.ok) throw new Error(result.error || `Threshold update failed (${response.status})`)
+        const chunks = splitIntoChunks(selectedBounds)
+        const results = []
+        for (const bounds of chunks) {
+          const response = await fetch('/api/detection-threshold', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ threshold, bounds }),
+          })
+          const result = await response.json()
+          if (!response.ok) throw new Error(result.error || `Threshold update failed (${response.status})`)
+          results.push({ ...result, bounds })
+        }
+        const detections = await stitchChunkImages(results, selectedBounds, 'detections')
+        const result = {
+          detections,
+          detected_pixels: results.reduce((sum, chunk) => sum + chunk.detected_pixels, 0),
+          detected_components: results.reduce((sum, chunk) => sum + chunk.detected_components, 0),
+          detected_area_ha: results.reduce((sum, chunk) => sum + chunk.detected_area_ha, 0),
+          valid_pixels: results.reduce((sum, chunk) => sum + chunk.valid_pixels, 0),
+          threshold,
+        }
         if (cancelled) return
         setAnalysis((previous) => previous ? { ...previous, ...result } : previous)
         setThresholdUpdating(false)
@@ -1611,25 +1772,73 @@ function App() {
     setThreshold(DEFAULT_THRESHOLD)
     setThresholdUpdating(false)
     try {
-      const response = await fetch('/api/alphaearth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bounds }),
-      })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || `Download failed (${response.status})`)
-      const missingLayer = ['alphaearth_2017', 'alphaearth_2024', 'velocity', 'detections']
-        .some((key) => typeof result[key] !== 'string' || !result[key].length)
-      const missingDetectionStats = !Number.isFinite(result.threshold)
-        || !Number.isFinite(result.detected_pixels)
-        || !Number.isFinite(result.detected_components)
-        || !Number.isFinite(result.detected_area_ha)
-      if (missingLayer || missingDetectionStats) {
-        throw new Error('The local API is out of date. Restart app/backend/server.py and retry the scan.')
+      const chunks = splitIntoChunks(bounds)
+      const loaded = []
+      let totals = { detected_pixels: 0, detected_components: 0, detected_area_ha: 0, valid_pixels: 0, weighted_displacement: 0 }
+      let nextChunk = 1
+      let renderQueue = Promise.resolve()
+      const controller = new AbortController()
+      const enqueueChunk = (index, result) => {
+        const chunkBounds = chunks[index]
+        renderQueue = renderQueue.then(async () => {
+          loaded.push({ ...result, bounds: chunkBounds })
+          totals.detected_pixels += result.detected_pixels
+          totals.detected_components += result.detected_components
+          totals.detected_area_ha += result.detected_area_ha
+          totals.valid_pixels += result.valid_pixels
+          totals.weighted_displacement += result.mean_displacement * result.valid_pixels
+          const [alphaearth_2017, alphaearth_2024, velocity, detections] = await Promise.all([
+            stitchChunkImages(loaded, bounds, 'alphaearth_2017'),
+            stitchChunkImages(loaded, bounds, 'alphaearth_2024'),
+            stitchChunkImages(loaded, bounds, 'velocity'),
+            stitchChunkImages(loaded, bounds, 'detections'),
+          ])
+          setAnalysis({
+            alphaearth_2017, alphaearth_2024, velocity, detections,
+            width: 1200, height: 800, bounds: [bounds[0][0], bounds[0][1], bounds[1][0], bounds[1][1]],
+            ...totals, threshold: DEFAULT_THRESHOLD,
+            mean_displacement: totals.weighted_displacement / Math.max(totals.valid_pixels, 1),
+            source: result.source, years: [2017, 2024],
+            chunk_count: chunks.length, loaded_chunks: loaded.length,
+          })
+        })
+        return renderQueue
       }
-      setAnalysis(result)
+      const downloadChunk = async (pcaBasis) => {
+        while (nextChunk < chunks.length) {
+          const index = nextChunk
+          nextChunk += 1
+          const response = await fetch('/api/alphaearth/chunk', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bounds: chunks[index], pca_basis: pcaBasis }),
+            signal: controller.signal,
+          })
+          const result = await response.json()
+          if (!response.ok) throw new Error(result.error || `Chunk ${index + 1} failed (${response.status})`)
+          await enqueueChunk(index, result)
+        }
+      }
+      try {
+        const firstResponse = await fetch('/api/alphaearth/chunk', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bounds: chunks[0] }), signal: controller.signal,
+        })
+        const firstResult = await firstResponse.json()
+        if (!firstResponse.ok) throw new Error(firstResult.error || 'The first chunk failed to load.')
+        const pcaBasis = firstResult.pca_basis
+        if (!pcaBasis) throw new Error('The API did not return the shared PCA basis. Restart app/backend/server.py and retry.')
+        await enqueueChunk(0, firstResult)
+        await Promise.all(Array.from(
+          { length: Math.min(MAX_CONCURRENT_CHUNK_DOWNLOADS, chunks.length - 1) },
+          () => downloadChunk(pcaBasis),
+        ))
+      } catch (error) {
+        controller.abort()
+        throw error
+      }
       setStage('detected')
     } catch (error) {
+      setAnalysis(null)
       setStage('draw')
       setActiveLayer('satellite')
       notify('AlphaEarth download failed', `${error.message}. Start the local API and retry.`, 'flag')
@@ -1651,6 +1860,7 @@ function App() {
       setCandidates(result.candidates.map(candidateForUi))
       setSelectedId(null)
       setStage(result.status === 'complete' ? 'results' : 'interpreting')
+      if (result.status === 'complete') setRightPanelTab('stats')
       setActiveLayer('satellite')
       if (result.total === 0) notify('No regions to review', 'No connected area exceeded 50 pixels at this threshold.', 'flag')
     } catch (error) {
@@ -1676,6 +1886,7 @@ function App() {
 
   const selectCandidate = (id) => {
     setSelectedId(id)
+    setRightPanelTab('details')
     setShowMethod(false)
   }
 
@@ -1824,6 +2035,10 @@ function App() {
             onDecide={decide}
             onShowAll={() => setFilter('all')}
             sheetScrollRef={sheetScrollRef}
+            candidates={candidates}
+            activeTab={rightPanelTab}
+            onTabChange={setRightPanelTab}
+            showTabs
           />
         </>
       )}

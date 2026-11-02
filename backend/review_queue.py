@@ -7,7 +7,7 @@ import os
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -23,8 +23,10 @@ from alphaearth import MIN_COMPONENT_PIXELS, _cached_arrays, detection_layer
 ARTIFACTS = Path(__file__).resolve().parent / "cache" / "review-jobs"
 JOBS: dict[str, dict] = {}
 LOCK = threading.RLock()
+# Keep jobs ordered, while reviewing several regions from the active job at once.
 EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vlm-review")
-MAX_VISIBLE_CANDIDATES = 60
+REGION_WORKERS = 4
+MAX_VISIBLE_CANDIDATES = 15
 MAX_AI_ANALYSES = 15
 IMAGE_SIZE = 448
 CONTEXT_SCALE = 2.5
@@ -33,9 +35,14 @@ GOOGLE_MODEL = "gemini-3.5-flash-lite"
 
 VISION_SYSTEM_PROMPT = (
     "You are a remote sensing expert verifying a potential land change. You will receive a pair of aligned aerial "
-    "images: left is 2017 and right is 2024. Both images show the same zoomed-out area; a thick orange outline "
-    "with a pale border marks the candidate in each image. First locate that outline, then compare the land inside "
-    "it between years, using the surrounding area only for context. Describe only visible evidence.\n\n"
+    "images: left is the earlier year and right is the later year, as labeled on the images. Nearby substitute "
+    "years may be used when the requested year has no image coverage. Both images show the same zoomed-out area; "
+    "a thick orange outline "
+    "with a pale border marks the candidate in each image. Hatched purple regions labeled NO IMAGE DATA are "
+    "missing orthophoto coverage and are not land features. First locate that outline, then compare only visible "
+    "land inside it between years, using the surrounding area only for context. If the candidate overlaps missing "
+    "coverage or cannot be compared reliably, return has_change true, category unclear_occluded, low confidence, "
+    "and say coverage is incomplete. Describe only visible evidence.\n\n"
     "Return exactly one JSON object, never a JSON array, never markdown, and never explanatory text. Use exactly "
     "these keys: title, has_change, category, confidence, rationale. The title must be a short, "
     "sentence-case label of 2 to 6 words, such as \"New building complex\" or \"Cleared surface\". The rationale "
@@ -120,16 +127,30 @@ def _download(year: int, bounds: tuple[float, ...]) -> Image.Image:
         "SERVICE": "WMS", "VERSION": "1.3.0", "REQUEST": "GetMap",
         "LAYERS": f"ORTHOIMAGERY.ORTHOPHOTOS{year}", "STYLES": "", "CRS": "EPSG:2154",
         "BBOX": ",".join(map(str, bounds)), "WIDTH": IMAGE_SIZE, "HEIGHT": IMAGE_SIZE, "FORMAT": "image/png",
+        "TRANSPARENT": "TRUE",
     }
     last_error = None
     for attempt in range(3):
         try:
             response = requests.get("https://data.geopf.fr/wms-r", params=params, timeout=(10, 45))
             response.raise_for_status()
-            image = Image.open(io.BytesIO(response.content)).convert("RGB")
+            image = Image.open(io.BytesIO(response.content)).convert("RGBA")
             if image.size != (IMAGE_SIZE, IMAGE_SIZE):
                 raise RuntimeError(f"IGN returned an unexpected {year} image size.")
-            return image
+            # Keep missing WMS coverage distinct from real pale ground/sky.
+            # Draw a conspicuous pattern only where the service returned alpha=0.
+            alpha = image.getchannel("A")
+            missing = alpha.point(lambda value: 255 if value < 16 else 0)
+            coverage = 1 - (missing.histogram()[255] / (IMAGE_SIZE * IMAGE_SIZE))
+            if missing.getbbox():
+                marker = Image.new("RGBA", image.size, (87, 52, 105, 255))
+                draw = ImageDraw.Draw(marker)
+                for offset in range(-IMAGE_SIZE, IMAGE_SIZE * 2, 18):
+                    draw.line((offset, 0, offset - IMAGE_SIZE, IMAGE_SIZE), fill=(221, 180, 245, 255), width=3)
+                ImageDraw.Draw(marker).text((12, IMAGE_SIZE - 30), "NO IMAGE DATA", fill="white", stroke_width=2, stroke_fill=(58, 35, 70, 255))
+                image = Image.composite(marker, image, missing)
+            image = image.convert("RGB")
+            return image, coverage
         except (requests.RequestException, OSError, RuntimeError) as exc:
             last_error = exc
             if isinstance(exc, requests.HTTPError) and exc.response is not None and exc.response.status_code < 500 and exc.response.status_code != 429:
@@ -137,6 +158,28 @@ def _download(year: int, bounds: tuple[float, ...]) -> Image.Image:
             if attempt < 2:
                 time.sleep(1.5 * (2 ** attempt))
     raise RuntimeError(f"Could not fetch IGN {year} orthophoto after 3 attempts: {last_error}") from last_error
+
+
+def _download_best_coverage(year: int, bounds: tuple[float, ...]):
+    """Use the requested year where possible, falling back to the nearest better-covered year."""
+    candidates = [year]
+    for offset in range(1, 4):
+        candidates.extend((year - offset, year + offset))
+    best = None
+    errors = []
+    for alternate_year in candidates:
+        try:
+            image, coverage = _download(alternate_year, bounds)
+        except RuntimeError as exc:
+            errors.append(str(exc))
+            continue
+        if best is None or coverage > best[1]:
+            best = (alternate_year, coverage, image)
+        if coverage >= 0.999:
+            break
+    if best is None:
+        raise RuntimeError(f"Could not fetch IGN imagery near {year}: {errors[-1] if errors else 'no imagery'}")
+    return best
 
 
 def _context_bounds(bounds: tuple[float, ...]) -> tuple[float, ...]:
@@ -164,11 +207,11 @@ def _outline_images(candidate: dict, before: Image.Image, after: Image.Image, bo
     return before, after
 
 
-def _composite(before: Image.Image, after: Image.Image) -> Image.Image:
+def _composite(before: Image.Image, after: Image.Image, before_year: int, after_year: int) -> Image.Image:
     result = Image.new("RGB", (IMAGE_SIZE * 2, IMAGE_SIZE), "#f5f0df")
     result.paste(before, (0, 0)); result.paste(after, (IMAGE_SIZE, 0))
-    ImageDraw.Draw(result).text((12, 12), "2017 · BEFORE", fill="white", stroke_width=2, stroke_fill="#17231d")
-    ImageDraw.Draw(result).text((IMAGE_SIZE + 12, 12), "2024 · AFTER", fill="white", stroke_width=2, stroke_fill="#17231d")
+    ImageDraw.Draw(result).text((12, 12), f"{before_year} · BEFORE", fill="white", stroke_width=2, stroke_fill="#17231d")
+    ImageDraw.Draw(result).text((IMAGE_SIZE + 12, 12), f"{after_year} · AFTER", fill="white", stroke_width=2, stroke_fill="#17231d")
     return result
 
 
@@ -262,73 +305,73 @@ def _ask_google_vlm(image: Image.Image) -> dict:
     return result
 
 
+def _review_candidate(job_id: str, job: dict, candidate: dict):
+    try:
+        bounds = _context_bounds(candidate["bounds"])
+        before_year, before_coverage, before = _download_best_coverage(2017, bounds)
+        after_year, after_coverage, after = _download_best_coverage(2024, bounds)
+        before, after = _outline_images(candidate, before, after, bounds)
+        composite = _composite(before, after, before_year, after_year)
+        path = ARTIFACTS / job_id / f"{candidate['id']}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        before.save(path.parent / f"{candidate['id']}-before.jpg", format="JPEG", quality=88, optimize=True)
+        after.save(path.parent / f"{candidate['id']}-after.jpg", format="JPEG", quality=88, optimize=True)
+        composite.save(path.with_suffix(".jpg"), format="JPEG", quality=88, optimize=True)
+        candidate["composite_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}"
+        candidate["before_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}-before"
+        candidate["after_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}-after"
+        candidate["before_year"] = before_year
+        candidate["after_year"] = after_year
+        candidate["imagery_coverage"] = {"before": round(before_coverage, 3), "after": round(after_coverage, 3)}
+        with LOCK:
+            candidate["status"] = "analyzing"
+        result = _ask_google_vlm(composite)
+        if result["has_change"] is False:
+            result["category"] = "no_visible_change"
+        result["provider"] = job["provider"]
+        with LOCK:
+            candidate.update(result)
+            candidate["status"] = "done"
+    except Exception as exc:
+        with LOCK:
+            candidate["status"] = "error"
+            candidate["error"] = str(exc)
+    finally:
+        candidate.pop("outline", None)
+        candidate.pop("bounds", None)
+        with LOCK:
+            job["completed"] += 1
+            job["active_ids"].discard(candidate["id"])
+            job["active_id"] = next(iter(job["active_ids"]), None)
+
+
 def _run(job_id: str):
     with LOCK:
         job = JOBS[job_id]
         job["status"] = "running"
-        job["phase"] = "loading_model"
-    if job["candidates"]:
-        try:
-            with LOCK:
-                job["phase"] = "downloading_imagery_and_reviewing"
-        except Exception as exc:
-            with LOCK:
-                for candidate in job["candidates"]:
-                    if not candidate.get("analysis_eligible", True):
-                        candidate["status"] = "limited"
-                        continue
-                    candidate["status"] = "error"
-                    candidate["error"] = str(exc)
-                job["completed"] = job["total"]
-                job["status"] = "complete"
-                job["phase"] = "error"
-            return
+        job["phase"] = "downloading_imagery_and_reviewing"
+        job["active_ids"] = set()
+    candidates = [candidate for candidate in job["candidates"] if candidate.get("analysis_eligible", True)]
     for candidate in job["candidates"]:
         if not candidate.get("analysis_eligible", True):
             candidate["status"] = "limited"
-            continue
-        with LOCK:
+    with ThreadPoolExecutor(max_workers=REGION_WORKERS, thread_name_prefix="region-review") as workers:
+        for start in range(0, len(candidates), REGION_WORKERS):
             if job.get("cancelled"):
                 break
-            candidate["status"] = "downloading"
-            job["active_id"] = candidate["id"]
-        try:
-            bounds = _context_bounds(candidate["bounds"])
-            before = _download(2017, bounds)
-            after = _download(2024, bounds)
-            before, after = _outline_images(candidate, before, after, bounds)
-            composite = _composite(before, after)
-            path = ARTIFACTS / job_id / f"{candidate['id']}"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            before.save(path.parent / f"{candidate['id']}-before.jpg", format="JPEG", quality=88, optimize=True)
-            after.save(path.parent / f"{candidate['id']}-after.jpg", format="JPEG", quality=88, optimize=True)
-            composite.save(path.with_suffix(".jpg"), format="JPEG", quality=88, optimize=True)
-            candidate["composite_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}"
-            candidate["before_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}-before"
-            candidate["after_url"] = f"/api/jobs/{job_id}/images/{candidate['id']}-after"
+            batch = candidates[start:start + REGION_WORKERS]
             with LOCK:
-                candidate["status"] = "analyzing"
-            result = _ask_google_vlm(composite)
-            # Reactivation dispatch:
-            # result = (_ask_google_vlm(composite) if job["provider"] == GOOGLE_AI_STUDIO
-            #           else _ask_local_vlm(composite))
-            if result["has_change"] is False:
-                result["category"] = "no_visible_change"
-            result["provider"] = job["provider"]
-            with LOCK:
-                candidate.update(result)
-                candidate["status"] = "done"
-        except Exception as exc:
-            with LOCK:
-                candidate["status"] = "error"
-                candidate["error"] = str(exc)
-        finally:
-            candidate.pop("outline", None); candidate.pop("bounds", None)
-            with LOCK:
-                job["completed"] += 1
+                for candidate in batch:
+                    candidate["status"] = "downloading"
+                    job["active_ids"].add(candidate["id"])
+                job["active_id"] = next(iter(job["active_ids"]), None)
+            pending = [workers.submit(_review_candidate, job_id, job, candidate) for candidate in batch]
+            for completed_future in as_completed(pending):
+                completed_future.result()
     with LOCK:
         job["status"] = "cancelled" if job.get("cancelled") else "complete"
         job["phase"] = "complete"
+        job["active_ids"] = set()
         job["active_id"] = None
 
 
@@ -341,11 +384,11 @@ def create_job(threshold: float, provider: str = GOOGLE_AI_STUDIO, bounds=(2.381
         raise ValueError("Google AI Studio is not configured. Add GOOGLE_API_KEY to the project .env file.")
     _, (__, distance, valid) = __import__("asyncio").run(_cached_arrays(bounds))
     _, detected, _ = detection_layer(distance, valid, threshold)
-    geo = __import__("alphaearth")._GEO_CACHE
+    geo = __import__("alphaearth")._GEO_CACHE[tuple(round(float(value), 8) for value in bounds)]
     candidates, omitted = _regions(detected, distance, geo)
     job_id = uuid.uuid4().hex[:12]
     job = {"id": job_id, "status": "queued", "threshold": threshold, "provider": provider,
-           "total": min(len(candidates), MAX_AI_ANALYSES), "completed": 0, "active_id": None,
+           "total": min(len(candidates), MAX_AI_ANALYSES), "completed": 0, "active_id": None, "active_ids": [],
            "omitted": omitted, "candidates": candidates}
     with LOCK:
         JOBS[job_id] = job
@@ -356,7 +399,8 @@ def create_job(threshold: float, provider: str = GOOGLE_AI_STUDIO, bounds=(2.381
 def public_job(job: dict) -> dict:
     with LOCK:
         return {
-            **{key: value for key, value in job.items() if key not in {"cancelled", "candidates"}},
+            **{key: value for key, value in job.items() if key not in {"cancelled", "candidates", "active_ids"}},
+            "active_ids": sorted(job.get("active_ids", ())),
             "candidates": [{key: value for key, value in candidate.items() if key not in {"outline", "bounds"}}
                            for candidate in job["candidates"]],
         }
